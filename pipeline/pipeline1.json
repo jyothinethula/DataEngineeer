@@ -38,6 +38,8 @@
 			{
 				"name": "ForEach1",
 				"type": "ForEach",
+				"state": "Inactive",
+				"onInactiveMarkAs": "Succeeded",
 				"dependsOn": [
 					{
 						"activity": "Lookup1",
@@ -158,27 +160,27 @@
 								"type": "Expression"
 							}
 						},
-						"triggerTime": {
-							"value": {
-								"value": "@pipeline().TriggerTime",
-								"type": "Expression"
-							}
-						},
 						"triggerType": {
 							"value": {
 								"value": "@pipeline().TriggerType",
 								"type": "Expression"
 							}
 						},
+						"triggerTime": {
+							"value": {
+								"value": "@formatDateTime(pipeline().TriggerTime,'yyyy-MM-dd HH:mm:ss')",
+								"type": "Expression"
+							}
+						},
 						"startTime": {
 							"value": {
-								"value": "@variables('StartTime')",
+								"value": "@formatDateTime(variables('StartTime'),'yyyy-MM-dd HH:mm:ss')",
 								"type": "Expression"
 							}
 						},
 						"EndTime": {
 							"value": {
-								"value": "@variables('EndTime')",
+								"value": "@formatDateTime(variables('EndTime'),'yyyy-MM-dd HH:mm:ss')",
 								"type": "Expression"
 							}
 						}
@@ -213,7 +215,7 @@
 					{
 						"activity": "ForEach1",
 						"dependencyConditions": [
-							"Succeeded"
+							"Completed"
 						]
 					}
 				],
@@ -226,6 +228,68 @@
 					"variableName": "EndTime",
 					"value": {
 						"value": "@utcnow()",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Web1",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "endTime",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": "https://ilemailalert.azurewebsites.net:443/api/emailAlert/triggers/When_a_HTTP_request_is_received/invoke?api-version=2022-05-01&sp=%2Ftriggers%2FWhen_a_HTTP_request_is_received%2Frun&sv=1.0&sig=7Kkb82uqTLVIcFMVxMvQof3O9ZNiaf65PfPcuM9oqI8",
+					"method": "POST",
+					"headers": {
+						"content": "app/json"
+					},
+					"body": {
+						"value": "{\n    \"Pipeline\":\"@{pipeline().Pipeline}\"\n    \"Data Factory\":\"@{pipeline().DataFactory}\"\n    \"RunId\":\"@{pipeline().RunId}\"\n    \"Status\":\"SUCCESS\"\n}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Web2",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "endTime",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": "https://ilemailalert.azurewebsites.net:443/api/emailAlert/triggers/When_a_HTTP_request_is_received/invoke?api-version=2022-05-01&sp=%2Ftriggers%2FWhen_a_HTTP_request_is_received%2Frun&sv=1.0&sig=7Kkb82uqTLVIcFMVxMvQof3O9ZNiaf65PfPcuM9oqI8",
+					"method": "POST",
+					"headers": {
+						"content": "app/json"
+					},
+					"body": {
+						"value": "{\n    \"pipeline\":\"@{pipeline().Pipeline}\",\n    \"Data Factory\":\"@{pipeline().DataFactory}\",\n    \"Run ID\":\"@{pipeline().RunId}\",\n    \"Status\":\"FAILURE\"\n    \"Error message\":\"@{activity('Copy data1').Error.Message}\"\n}",
 						"type": "Expression"
 					}
 				}
